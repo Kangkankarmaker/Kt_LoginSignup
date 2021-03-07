@@ -1,20 +1,65 @@
 package k.example.ktloginsignup.ui.home
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import k.example.ktloginsignup.R
+import androidx.lifecycle.Observer
+import k.example.ktloginsignup.data.Responses.LogInResponse
+import k.example.ktloginsignup.data.Responses.User
+import k.example.ktloginsignup.data.network.Resource
+import k.example.ktloginsignup.data.network.UserApi
+import k.example.ktloginsignup.data.repository.UserRepository
+import k.example.ktloginsignup.databinding.FragmentHomeBinding
+import k.example.ktloginsignup.ui.base.BaseFragment
+import k.example.ktloginsignup.ui.visible
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 
-class HomeFragment : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_home, container, false)
+class HomeFragment : BaseFragment<HomeViewModel,FragmentHomeBinding,UserRepository>() {
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        binding.progressbar.visible(false)
+        viewModel.getUser()
+
+        viewModel.user.observe(viewLifecycleOwner, Observer {
+            when(it){
+                is Resource.Success->{
+                    binding.progressbar.visible(false)
+                    updateUI(it.value.user)
+                }
+                is Resource.Loading->{
+                    binding.progressbar.visible(true)
+                }
+            }
+        })
+
+        binding.buttonLogout.setOnClickListener {
+            logout()
+        }
     }
+
+    private fun updateUI(user:User) {
+        with(binding){
+            textViewId.text=user.id.toString()
+            textViewName.text=user.name
+            textViewEmail.text=user.email
+        }
+    }
+
+    override fun getViewModel()=HomeViewModel::class.java
+
+    override fun getFragmentBinding(inflater: LayoutInflater, container: ViewGroup?)
+    = FragmentHomeBinding.inflate(inflater,container,false)
+
+    override fun getFragmentRepository(): UserRepository {
+       val token= runBlocking { userPreferences.authToken.first() }
+        val api=remoteDataSource.buildApi(UserApi::class.java,token)
+        return UserRepository(api)
+    }
+
 
 }

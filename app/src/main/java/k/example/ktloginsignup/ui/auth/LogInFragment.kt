@@ -13,6 +13,7 @@ import k.example.ktloginsignup.data.network.Resource
 import k.example.ktloginsignup.data.repository.AuthRepository
 import k.example.ktloginsignup.ui.base.BaseFragment
 import k.example.ktloginsignup.ui.enable
+import k.example.ktloginsignup.ui.handleApiError
 import k.example.ktloginsignup.ui.home.HomeActivity
 import k.example.ktloginsignup.ui.startNewActivity
 import k.example.ktloginsignup.ui.visible
@@ -28,19 +29,18 @@ class LogInFragment : BaseFragment<AuthViewModel,FragmentLogInBinding,AuthReposi
         binding.buttonLogIn.enable(false)
 
         viewModel.loginResponse.observe(viewLifecycleOwner, Observer {
-            binding.progressBar.visible(false)
+            binding.progressBar.visible(it is Resource.Loading)
             when (it) {
                 is Resource.Success -> {
                     Toast.makeText(requireContext(), "done", Toast.LENGTH_SHORT).show()
 
-                    viewModel.saveAuthToken(it.value.user.access_token.toString())
-                    requireActivity().startNewActivity(HomeActivity::class.java)
-
+                    lifecycleScope.launch {
+                        viewModel.saveAuthToken(it.value.user.access_token.toString())
+                        requireActivity().startNewActivity(HomeActivity::class.java)
+                    }
 
                 }
-                is Resource.Failure -> {
-                    Toast.makeText(requireContext(), "not done", Toast.LENGTH_SHORT).show()
-                }
+                is Resource.Failure -> handleApiError(it){logIn()}
             }
         })
 
@@ -50,12 +50,14 @@ class LogInFragment : BaseFragment<AuthViewModel,FragmentLogInBinding,AuthReposi
         }
 
         binding.buttonLogIn.setOnClickListener {
-            val email=binding.txtLogInEmail.text.toString().trim()
-            val password=binding.txtLogInPassword.text.toString().trim()
-
-            viewModel.login(email, password)
-            binding.progressBar.visible(true)
+            logIn()
         }
+    }
+
+    private fun logIn() {
+        val email=binding.txtLogInEmail.text.toString().trim()
+        val password=binding.txtLogInPassword.text.toString().trim()
+        viewModel.login(email, password)
     }
 
 

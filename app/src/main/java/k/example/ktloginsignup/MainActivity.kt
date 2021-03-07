@@ -24,7 +24,6 @@ class MainActivity : AppCompatActivity() {
         userPreferences.authToken.asLiveData().observe(this, Observer {
             //Toast.makeText(this, it ?: "null", Toast.LENGTH_SHORT).show()
 
-
             val activity=if(it==null)AuthActivity::class.java else HomeActivity::class.java
             startNewActivity(activity)
         })
